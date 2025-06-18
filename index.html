@@ -1,0 +1,3106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buffer Barcodes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    <style>
+        :root {
+            --main-bg: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #8B5CF6 100%);
+            --container-bg: rgba(248, 250, 252, 0.96);
+            --tab-bar-bg: #f3e8ff;
+            --tab-btn-color: #6d28d9;
+            --tab-btn-bg-active: linear-gradient(90deg, #6366f1 0%, #8B5CF6 100%);
+            --tab-btn-bg-hover: rgba(168,85,247,0.12);
+            --tab-indicator-bg: linear-gradient(90deg, #6366f1 0%, #8B5CF6 100%);
+            --imza-color: #7c3aed30;
+            --barcode-bg: #fff;
+            --barcode-text-color: #1e293b;
+            --settings-bg: #f8fafc;
+            --settings-title: #7c3aed;
+            --settings-label: #4b5563;
+            --settings-select: #fff;
+            --settings-border: #c7d2fe;
+            --barcode-container-bg: rgba(255, 255, 255, 0.93);
+            --barcode-container-border: 1px solid rgba(148, 163, 184, 0.25);
+            --buffer-box-selected-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 10px 20px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.08);
+        }
+        body.dark {
+            --main-bg: linear-gradient(135deg, #23263a 0%, #3e3669 50%, #8B5CF6 100%);
+            --container-bg: rgba(34, 34, 39, 0.98);
+            --tab-bar-bg: #2e1d40;
+            --tab-btn-color: #c4b5fd;
+            --tab-btn-bg-active: linear-gradient(90deg, #6366f1 0%, #6d28d9 100%);
+            --tab-btn-bg-hover: rgba(168,85,247,0.18);
+            --tab-indicator-bg: linear-gradient(90deg, #6d28d9 0%, #a78bfa 100%);
+            --imza-color: #c4b5fd30;
+            --barcode-bg: #23263a;
+            --barcode-text-color: #e0e7ef;
+            --settings-bg: #181825;
+            --settings-title: #a78bfa;
+            --settings-label: #a3a3a3;
+            --settings-select: #23263a;
+            --settings-border: #7c3aed;
+            --barcode-container-bg: rgba(36, 36, 56, 0.98);
+            --barcode-container-border: 1.5px solid #7c3aed;
+            --buffer-box-selected-shadow: 0 0 0 2px #8b5cf6, 0 10px 32px #8b5cf666;
+        }
+        html, body {height: 100%;}
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--main-bg);
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        .container {
+            background: var(--container-bg);
+            backdrop-filter: blur(25px);
+            padding: 40px 12px 40px 12px;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15), 0 0 0 1px rgba(148, 163, 184, 0.2);
+            max-width: 2000px;
+            width: 99.5%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+        .tab-bar {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            margin: 0 auto 32px auto;
+            background: var(--tab-bar-bg);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(139,92,246,0.12);
+            overflow: hidden;
+            position: relative;
+            width: min(800px, 95%);
+            padding: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 16px 24px;
+            border: none;
+            background: none;
+            color: var(--tab-btn-color);
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 2;
+            border-radius: 18px;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+            opacity: 0.7;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            opacity: 1;
+            transform: translateY(-1px);
+            background: var(--tab-btn-bg-active);
+            box-shadow: 0 8px 24px rgba(139,92,246,0.25);
+        }
+
+        .tab-btn:not(.active):hover {
+            background: var(--tab-btn-bg-hover);
+            color: #7c3aed;
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .tab-indicator {
+            position: absolute;
+            bottom: 6px;
+            height: 4px;
+            background: var(--tab-indicator-bg);
+            border-radius: 4px;
+            transition: 
+                left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1;
+            box-shadow: 0 2px 8px rgba(139,92,246,0.3);
+        }
+
+        .tab-content {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px) scale(0.98);
+            transition: 
+                opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tab-content.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        @media (max-width: 768px) {
+            .tab-bar {
+                width: 92%;
+                padding: 4px;
+            }
+            
+            .tab-btn {
+                padding: 14px 16px;
+                font-size: 0.95em;
+            }
+        }
+        /* Barcode Generator */
+        .custom-barcode-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 320px;
+            margin-top: 36px;
+        }
+        .custom-barcode-input {
+            width: 520px;
+            max-width: 98vw;
+            font-size: 1.22rem;
+            padding: 20px 22px;
+            border-radius: 20px;
+            border: 1.5px solid #c7d2fe;
+            outline: none;
+            transition: border 0.15s;
+            box-shadow: 0 2px 8px rgba(99,102,241,0.04);
+            font-family: inherit;
+            margin-bottom: 15px;
+            background: #f8fafc;
+            text-align: center;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .custom-barcode-input:focus {
+            border-color: #8B5CF6;
+        }
+        .custom-generate-btn {
+            padding: 14px 34px;
+            background: linear-gradient(135deg, #6366f1, #a21caf);
+            color: #fff;
+            font-size: 1.13em;
+            font-weight: 700;
+            border: none;
+            border-radius: 18px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(139,92,246,0.08);
+            transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
+            margin-bottom: 16px;
+            margin-top: 8px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        /* Add disabled state for generate button */
+        .custom-generate-btn.disabled {
+            background: linear-gradient(135deg, #94a3b8, #64748b);
+            cursor: not-allowed;
+            opacity: 0.7;
+            box-shadow: none;
+        }
+        #customBarcodeContainer {
+            margin-top: 32px;
+            background: var(--barcode-container-bg);
+            border-radius: 18px;
+            border: var(--barcode-container-border);
+            box-shadow: 0 6px 18px rgba(148,163,184,0.10);
+            width: 620px;
+            min-width: 320px;
+            max-width: 99vw;
+            min-height: 220px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: width 0.25s cubic-bezier(.58,.06,.58,1.05), padding 0.25s cubic-bezier(.58,.06,.58,1.05), background 0.16s;
+            padding: 45px 0;
+            opacity: 1;
+            animation: none;
+        }
+        #customBarcodeContainer.show {
+            display: flex !important;
+            animation: barcodeFastIn .14s cubic-bezier(.58,.06,.58,1.05);
+        }
+        @keyframes barcodeFastIn {
+            0% { opacity: 0; transform: scale(0.88);}
+            100% { opacity: 1; transform: scale(1);}
+        }
+        #customBarcodeContainer .barcode-text {
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            color: #2d2d2d;
+            font-size: 19px;
+            padding: 12px 14px;
+            margin-bottom: 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            width: 100%;
+            max-width: 360px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        body.dark #customBarcodeContainer .barcode-text {
+            background: #23263a;
+            color: #e0e7ef;
+            border-color: #7c3aed;
+        }
+        #barcodeWrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 30px;
+        }
+        #customBarcode {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            background: var(--barcode-bg);
+            padding: 22px 28px;
+            border-radius: 22px !important;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 6px 18px rgba(148,163,184,0.08);
+        }
+        .clear-btn {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 17px;
+            font-weight: 600;
+            transition: all 0.15s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.18), 0 0 0 1px rgba(255,255,255,0.1);
+            margin-top: 26px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        .clear-btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 15px 30px rgba(239, 68, 68, 0.28), 0 0 0 1px rgba(255,255,255,0.1);
+        }
+        .clear-btn:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+
+        /* Tab Headers - Make them smaller */
+        .tab-header {
+            font-size: 2em; /* Reduced from 2.6em */
+            font-weight: 700; /* Reduced from 800 */
+            text-align: center;
+            margin: 15px 0 30px 0; /* Reduced margins */
+            opacity: 0;
+            transform: translateY(-20px);
+            animation: slideDown 0.5s ease forwards;
+        }
+        
+        .tab-header.barcode-generator {
+            background: linear-gradient(135deg, #6366f1 0%, #8B5CF6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .tab-header.buffer-barcodes {
+            background: linear-gradient(135deg, #6366f1 0%, #8B5CF6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .tab-header.registered-barcodes {
+            background: linear-gradient(135deg, #6366f1 0%, #8B5CF6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        body.dark .tab-header.barcode-generator {
+            background: linear-gradient(135deg, #6366f1 0%, #8B5CF6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        body.dark .tab-header.buffer-barcodes {
+            background: linear-gradient(135deg, #6366f1 0%, #8B5CF6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        body.dark .tab-header.registered-barcodes {
+            background: linear-gradient(135deg, #6366f1 0%, #8B5CF6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Buffer Barcodes Tab: Kategori renkli arkaplanlar (açık modda opak, dark modda tam transparan) */
+        .barcode-container.category-c {
+            border-color: #F59E0B;
+            background: #fffbf7f2; /* açık modda opak */
+        }
+        .barcode-container.category-b {
+            border-color: #16a34a;
+            background: #c0f9d81a; /* açık modda opak */
+        }
+        .barcode-container.category-a {
+            border-color: #8B5CF6;
+            background: #d8baff40; /* açık modda opak */
+        }
+        body.dark .barcode-container.category-a,
+        body.dark .barcode-container.category-b,
+        body.dark .barcode-container.category-c {
+            /* Dark modda background tamamen transparan */
+            background: rgba(0,0,0,0) !important;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(32px) scale(.96);}
+            to { opacity: 1; transform: translateY(0) scale(1);}
+        }
+        .barcode-text {
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 35px;
+            color: var(--barcode-text-color);
+            background: rgba(241, 245, 249, 0.85);
+            padding: 20px 30px;
+            border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+        }
+        .barcode-text.category-c {
+            background: rgba(255, 244, 230, 0.9);
+            color: #EA580C;
+        }
+        .barcode-text.category-b {
+            background: #eafff3;
+            color: #047857;
+        }
+        .barcode-text.category-a {
+            background: rgba(245, 240, 255, 0.9);
+            color: #7C3AED;
+        }
+        body.dark .barcode-text.category-c {
+            border: 1px solid #F59E0B !important;
+        }
+        body.dark .barcode-text.category-b {
+            border: 1px solid #16a34a !important;
+        }
+        body.dark .barcode-text.category-a {
+            border: 1px solid #8B5CF6 !important;
+        }
+        body.dark .barcode-text {
+            background: #23263a;
+            color: #e0e7ef;
+        }
+        #barcode, #customBarcode {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            background: #ffffff;
+            padding: 35px;
+            border-radius: 22px !important;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.08), 0 0 0 1px rgba(148, 163, 184, 0.08);
+            width: fit-content;
+            align-self: center;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+        }
+        .barcode-changing { transform: scale(0.95); opacity: 0.3;}
+        .barcode-appear { animation: barcodeAppear 0.25s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;}
+        @keyframes barcodeAppear {
+            0% { transform: scale(0.95); opacity: 0.3;}
+            100% { transform: scale(1); opacity: 1;}
+        }
+        .imza {
+            position: fixed;
+            bottom: 16px;
+            right: 22px;
+            color: var(--imza-color);
+            font-size: 1.17em;
+            font-family: 'Inter', sans-serif;
+            pointer-events: none;
+            z-index: 9999;
+            user-select: none;
+            opacity: 1;
+            letter-spacing: 0.04em;
+        }
+        /* Settings Tab Styles, Registered Barcodes Tab Styles... (devamı senin kodunla aynı) */
+        .settings-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .settings-select {
+            height: 32px;
+            padding: 0 12px;
+            background: var(--settings-bg);
+            border: 1.5px solid var(--settings-border);
+            border-radius: 10px;
+            color: var(--settings-label);
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .settings-switch {
+            width: 46px;
+            height: 28px;
+            cursor: pointer;
+        }
+
+        /* Instant Generate Switch Styles */
+        .instant-generate-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+        
+        .instant-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+        
+        .instant-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .instant-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(148, 163, 184, 0.2);
+            transition: .3s;
+            border-radius: 34px;
+        }
+        
+        .instant-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        input:checked + .instant-slider {
+            background: linear-gradient(135deg, #6366f1, #8B5CF6);
+        }
+        
+        input:checked + .instant-slider:before {
+            transform: translateX(20px);
+        }
+
+        .instant-label {
+            font-size: 0.92em;
+            color: var(--settings-label);
+            font-weight: 500;
+            user-select: none;
+            opacity: 0.9;
+        }
+        /* Warehouse */
+        .warehouse-layout {
+            background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+            padding: 60px 30px;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            border: 2px solid rgba(148, 163, 184, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            overflow: visible;
+            box-shadow: 
+                inset 0 1px 0 rgba(255,255,255,0.4),
+                0 8px 20px rgba(0,0,0,0.04);
+        }
+        body.dark .warehouse-layout {
+            background: linear-gradient(135deg, #2c2c44 0%, #323352 100%);
+            border-color: #7c3aed;
+            box-shadow: 0 8px 32px rgba(139,92,246,0.09);
+        }
+        .shelf-row { display: flex; align-items: center; justify-content: center; position: relative; width: 100%; }
+        .shelf-row.category-c, .shelf-row.category-b { margin-bottom: 15px; }
+        .shelf-row.category-a { margin-top: 0px; }
+        .category-label { display: none; }
+        .shelf-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            margin: 0 4px;
+        }
+        .shelf-box {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #333;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s cubic-bezier(0.4, 0.0, 0.2, 1);
+            user-select: none;
+            position: relative;
+            box-shadow: 
+                0 4px 12px rgba(0,0,0,0.08),
+                0 2px 4px rgba(0,0,0,0.04),
+                0 1px 3px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        body.dark .shelf-box {
+            background: linear-gradient(135deg, #23263a 0%, #2e3252 100%);
+            color: #c4b5fd;
+            border-color: #7c3aed;
+        }
+        body.dark .category-a .shelf-box {
+            border-color: #8B5CF6;
+            color: #bda6f8;
+            background: linear-gradient(135deg, #2d2245 0%, #322559 100%);
+        }
+        body.dark .category-b .shelf-box {
+            border-color: #16a34a;
+            color: #7ed9a7;
+            background: linear-gradient(135deg, #20472b 0%, #21392b 100%);
+        }
+        body.dark .category-c .shelf-box {
+            border-color: #F59E0B;
+            color: #f7ba52;
+            background: linear-gradient(135deg, #3f3020 0%, #443825 100%);
+        }
+        .shelf-number { display: none; }
+        .shelf-box:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 
+                0 16px 32px rgba(0,0,0,0.12),
+                0 8px 16px rgba(0,0,0,0.08),
+                0 4px 8px rgba(0,0,0,0.06);
+            z-index: 10;
+            position: relative;
+        }
+        .shelf-box:active {
+            transform: translateY(-4px) scale(0.98);
+            transition: all 0.08s ease;
+        }
+        .shelf-box.selected {
+            transform: translateY(-6px) scale(1.1);
+            box-shadow: var(--buffer-box-selected-shadow);
+            z-index: 15;
+            border-width: 2.5px;
+        }
+        body.dark .category-a .shelf-box.selected {
+            background: linear-gradient(135deg, #45337d 0%, #453a99 100%);
+            border-color: #a78bfa;
+            color: #e0e7ef;
+        }
+        body.dark .category-b .shelf-box.selected {
+            background: linear-gradient(135deg, #1f613b 0%, #097036 100%);
+            border-color: #50fa99;
+            color: #e0e7ef;
+        }
+        body.dark .category-c .shelf-box.selected {
+            background: linear-gradient(135deg, #8c6c28 0%, #f59e0b 100%);
+            border-color: #facc15;
+            color: #fffbe4;
+        }
+        .shelf-container.selected { z-index: 15; }
+        .category-a .shelf-box { 
+            border-color: #A855F7; 
+            color: #7C3AED;
+            background: linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 100%);
+        }
+        .category-a .shelf-box:hover { 
+            background: linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%);
+            box-shadow: 0 16px 32px rgba(168, 85, 247, 0.15), 0 8px 16px rgba(168, 85, 247, 0.1), 0 4px 8px rgba(168, 85, 247, 0.08);
+        }
+        .category-a .shelf-box.selected { 
+            background: linear-gradient(135deg, #E9D5FF 0%, #DDD6FE 100%);
+            border-color: #8B5CF6;
+            border-width: 2.5px;
+            box-shadow: var(--buffer-box-selected-shadow);
+        }
+        .category-c .shelf-box { 
+            border-color: #F97316; 
+            color: #EA580C;
+            background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+        }
+        .category-c .shelf-box:hover { 
+            background: linear-gradient(135deg, #FFEDD5 0%, #FED7AA 100%);
+            box-shadow: 0 16px 32px rgba(249, 115, 22, 0.15), 0 8px 16px rgba(249, 115, 22, 0.1), 0 4px 8px rgba(249, 115, 22, 0.08);
+        }
+        .category-c .shelf-box.selected { 
+            background: linear-gradient(135deg, #FED7AA 0%, #FDBA74 100%);
+            border-color: #F59E0B;
+            border-width: 2.5px;
+            box-shadow: var(--buffer-box-selected-shadow);
+        }
+        .category-b .shelf-box { 
+            border-color: #22c55e; 
+            color: #047857;
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        }
+        .category-b .shelf-box:hover { 
+            background: linear-gradient(135deg, #bbf7d0 0%, #22c55e 100%);
+            box-shadow: 0 16px 32px rgba(34,197,94,0.19), 0 8px 16px rgba(34,197,94,0.12), 0 4px 8px rgba(34,197,94,0.09);
+        }
+        .category-b .shelf-box.selected { 
+            background: linear-gradient(135deg, #bbf7d0 0%, #4ade80 100%);
+            border-color: #16a34a;
+            border-width: 2.5px;
+            box-shadow: var(--buffer-box-selected-shadow);
+        }
+        .shelf-category {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            overflow: visible;
+            width: 100%;
+            min-width: 0;
+            padding: 15px 0;
+        }
+        .barcode-container {
+            margin: 40px auto 0;
+            padding: 50px;
+            background: var(--barcode-container-bg);
+            backdrop-filter: blur(25px);
+            border-radius: 20px;
+            border: var(--barcode-container-border);
+            text-align: center;
+            display: none;
+            width: 100%;
+            max-width: 900px;
+            align-self: center;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        .barcode-container.show {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: slideIn 0.36s cubic-bezier(.58,.06,.58,1.05);
+        }
+        .barcode-container.category-c {
+            border-color: #F59E0B;
+            background: #fffbf7f2;
+        }
+        .barcode-container.category-b {
+            border-color: #16a34a;
+            background: #c0f9d81a;
+        }
+        .barcode-container.category-a {
+            border-color: #8B5CF6;
+            background: #d8baff40;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(32px) scale(.96);}
+            to { opacity: 1; transform: translateY(0) scale(1);}
+        }
+        .barcode-text {
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 35px;
+            color: var(--barcode-text-color);
+            background: rgba(241, 245, 249, 0.85);
+            padding: 20px 30px;
+            border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+        }
+        .barcode-text.category-c {
+            background: rgba(255, 244, 230, 0.9);
+            color: #EA580C;
+        }
+        .barcode-text.category-b {
+            background: #eafff3;
+            color: #047857;
+        }
+        .barcode-text.category-a {
+            background: rgba(245, 240, 255, 0.9);
+            color: #7C3AED;
+        }
+        body.dark .barcode-text.category-c {
+            border: 1px solid #F59E0B !important;
+        }
+        body.dark .barcode-text.category-b {
+            border: 1px solid #16a34a !important;
+        }
+        body.dark .barcode-text.category-a {
+            border: 1px solid #8B5CF6 !important;
+        }
+        body.dark .barcode-text {
+            background: #23263a;
+            color: #e0e7ef;
+        }
+        #barcode, #customBarcode {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            background: #ffffff;
+            padding: 35px;
+            border-radius: 22px !important;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.08), 0 0 0 1px rgba(148, 163, 184, 0.08);
+            width: fit-content;
+            align-self: center;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+        }
+        .barcode-changing { transform: scale(0.95); opacity: 0.3;}
+        .barcode-appear { animation: barcodeAppear 0.25s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;}
+        @keyframes barcodeAppear {
+            0% { transform: scale(0.95); opacity: 0.3;}
+            100% { transform: scale(1); opacity: 1;}
+        }
+        .imza {
+            position: fixed;
+            bottom: 16px;
+            right: 22px;
+            color: var(--imza-color);
+            font-size: 1.17em;
+            font-family: 'Inter', sans-serif;
+            pointer-events: none;
+            z-index: 9999;
+            user-select: none;
+            opacity: 1;
+            letter-spacing: 0.04em;
+        }
+        /* Settings Tab Styles, Registered Barcodes Tab Styles... (devamı senin kodunla aynı) */
+        .settings-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .settings-select {
+            height: 32px;
+            padding: 0 12px;
+            background: var(--settings-bg);
+            border: 1.5px solid var(--settings-border);
+            border-radius: 10px;
+            color: var(--settings-label);
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .settings-switch {
+            width: 46px;
+            height: 28px;
+            cursor: pointer;
+        }
+
+        /* Instant Generate Switch Styles */
+        .instant-generate-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+        
+        .instant-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+        
+        .instant-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .instant-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(148, 163, 184, 0.2);
+            transition: .3s;
+            border-radius: 34px;
+        }
+        
+        .instant-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        input:checked + .instant-slider {
+            background: linear-gradient(135deg, #6366f1, #8B5CF6);
+        }
+        
+        input:checked + .instant-slider:before {
+            transform: translateX(20px);
+        }
+
+        .instant-label {
+            font-size: 0.92em;
+            color: var(--settings-label);
+            font-weight: 500;
+            user-select: none;
+            opacity: 0.9;
+        }
+        /* Warehouse */
+        .warehouse-layout {
+            background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+            padding: 60px 30px;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            border: 2px solid rgba(148, 163, 184, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            overflow: visible;
+            box-shadow: 
+                inset 0 1px 0 rgba(255,255,255,0.4),
+                0 8px 20px rgba(0,0,0,0.04);
+        }
+        body.dark .warehouse-layout {
+            background: linear-gradient(135deg, #2c2c44 0%, #323352 100%);
+            border-color: #7c3aed;
+            box-shadow: 0 8px 32px rgba(139,92,246,0.09);
+        }
+        .shelf-row { display: flex; align-items: center; justify-content: center; position: relative; width: 100%; }
+        .shelf-row.category-c, .shelf-row.category-b { margin-bottom: 15px; }
+        .shelf-row.category-a { margin-top: 0px; }
+        .category-label { display: none; }
+        .shelf-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            margin: 0 4px;
+        }
+        .shelf-box {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #333;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s cubic-bezier(0.4, 0.0, 0.2, 1);
+            user-select: none;
+            position: relative;
+            box-shadow: 
+                0 4px 12px rgba(0,0,0,0.08),
+                0 2px 4px rgba(0,0,0,0.04),
+                0 1px 3px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        body.dark .shelf-box {
+            background: linear-gradient(135deg, #23263a 0%, #2e3252 100%);
+            color: #c4b5fd;
+            border-color: #7c3aed;
+        }
+        body.dark .category-a .shelf-box {
+            border-color: #8B5CF6;
+            color: #bda6f8;
+            background: linear-gradient(135deg, #2d2245 0%, #322559 100%);
+        }
+        body.dark .category-b .shelf-box {
+            border-color: #16a34a;
+            color: #7ed9a7;
+            background: linear-gradient(135deg, #20472b 0%, #21392b 100%);
+        }
+        body.dark .category-c .shelf-box {
+            border-color: #F59E0B;
+            color: #f7ba52;
+            background: linear-gradient(135deg, #3f3020 0%, #443825 100%);
+        }
+        .shelf-number { display: none; }
+        .shelf-box:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 
+                0 16px 32px rgba(0,0,0,0.12),
+                0 8px 16px rgba(0,0,0,0.08),
+                0 4px 8px rgba(0,0,0,0.06);
+            z-index: 10;
+            position: relative;
+        }
+        .shelf-box:active {
+            transform: translateY(-4px) scale(0.98);
+            transition: all 0.08s ease;
+        }
+        .shelf-box.selected {
+            transform: translateY(-6px) scale(1.1);
+            box-shadow: var(--buffer-box-selected-shadow);
+            z-index: 15;
+            border-width: 2.5px;
+        }
+        body.dark .category-a .shelf-box.selected {
+            background: linear-gradient(135deg, #45337d 0%, #453a99 100%);
+            border-color: #a78bfa;
+            color: #e0e7ef;
+        }
+        body.dark .category-b .shelf-box.selected {
+            background: linear-gradient(135deg, #1f613b 0%, #097036 100%);
+            border-color: #50fa99;
+            color: #e0e7ef;
+        }
+        body.dark .category-c .shelf-box.selected {
+            background: linear-gradient(135deg, #8c6c28 0%, #f59e0b 100%);
+            border-color: #facc15;
+            color: #fffbe4;
+        }
+        .shelf-container.selected { z-index: 15; }
+        .category-a .shelf-box { 
+            border-color: #A855F7; 
+            color: #7C3AED;
+            background: linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 100%);
+        }
+        .category-a .shelf-box:hover { 
+            background: linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%);
+            box-shadow: 0 16px 32px rgba(168, 85, 247, 0.15), 0 8px 16px rgba(168, 85, 247, 0.1), 0 4px 8px rgba(168, 85, 247, 0.08);
+        }
+        .category-a .shelf-box.selected { 
+            background: linear-gradient(135deg, #E9D5FF 0%, #DDD6FE 100%);
+            border-color: #8B5CF6;
+            border-width: 2.5px;
+            box-shadow: var(--buffer-box-selected-shadow);
+        }
+        .category-c .shelf-box { 
+            border-color: #F97316; 
+            color: #EA580C;
+            background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+        }
+        .category-c .shelf-box:hover { 
+            background: linear-gradient(135deg, #FFEDD5 0%, #FED7AA 100%);
+            box-shadow: 0 16px 32px rgba(249, 115, 22, 0.15), 0 8px 16px rgba(249, 115, 22, 0.1), 0 4px 8px rgba(249, 115, 22, 0.08);
+        }
+        .category-c .shelf-box.selected { 
+            background: linear-gradient(135deg, #FED7AA 0%, #FDBA74 100%);
+            border-color: #F59E0B;
+            border-width: 2.5px;
+            box-shadow: var(--buffer-box-selected-shadow);
+        }
+        .category-b .shelf-box { 
+            border-color: #22c55e; 
+            color: #047857;
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        }
+        .category-b .shelf-box:hover { 
+            background: linear-gradient(135deg, #bbf7d0 0%, #22c55e 100%);
+            box-shadow: 0 16px 32px rgba(34,197,94,0.19), 0 8px 16px rgba(34,197,94,0.12), 0 4px 8px rgba(34,197,94,0.09);
+        }
+        .category-b .shelf-box.selected { 
+            background: linear-gradient(135deg, #bbf7d0 0%, #4ade80 100%);
+            border-color: #16a34a;
+            border-width: 2.5px;
+            box-shadow: var(--buffer-box-selected-shadow);
+        }
+        .shelf-category {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            overflow: visible;
+            width: 100%;
+            min-width: 0;
+            padding: 15px 0;
+        }
+        .saved-barcodes-area {
+            width: 95%;
+            max-width: 2000px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .barcode-quick-add {
+            display: flex;
+            gap: 6px; /* Reduced from 12px */
+            max-width: 600px;
+            width: 90%;
+            margin: 0 auto 32px auto;
+            padding: 0 20px;
+            justify-content: center;
+            align-items: center; /* Add alignment */
+        }
+
+        .barcode-quick-add input {
+            flex: 1;
+            max-width: 500px;
+            height: 48px;
+            padding: 0 20px;
+            border-radius: 12px;
+            border: 2px solid var(--settings-border);
+            background: var(--settings-bg);
+            color: var(--settings-label);
+            font-size: 1.1em;
+            transition: all 0.2s ease;
+        }
+
+        /* Add new style for the plus button - updated for modern boxed look */
+        .add-btn {
+            width: 44px !important; /* Slightly smaller */
+            height: 44px !important;
+            padding: 0 !important;
+            font-size: 24px !important; /* Slightly smaller */
+            font-weight: 400 !important;
+            line-height: 0;
+            border-radius: 12px !important; /* Match input radius */
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #6366f1, #8B5CF6) !important;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1) !important;
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(99,102,241,0.25);
+        }
+
+        .add-btn:active {
+            transform: translateY(0px);
+        }
+
+        .barcode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 32px;
+            padding: 20px;
+            max-width: 1800px; /* Increased from 1400px */
+            width: 98%; /* Increased from 95% */
+            margin: 0 auto;
+            justify-content: center;
+            justify-items: center;
+        }
+
+        /* Floating Settings Button and Menu */
+        .settings-float-btn {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            width: 46px;
+            height: 46px;
+            background: var(--settings-bg);
+            border: 1.5px solid var(--settings-border);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            z-index: 1000;
+            box-shadow: 0 8px 24px rgba(99,102,241,0.08);
+            backdrop-filter: blur(10px);
+        }
+
+        .settings-float-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--settings-title);
+            transition: transform 0.3s ease;
+        }
+
+        .settings-float-btn:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 12px 28px rgba(99,102,241,0.12);
+            border-color: #8B5CF6;
+        }
+
+        /* Modern Settings Panel */
+        .settings-float-menu {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            background: var(--settings-bg);
+            border: 1.5px solid var(--settings-border);
+            border-radius: 24px;
+            padding: 40px;
+            width: 420px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            z-index: 999;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            backdrop-filter: blur(12px);
+        }
+
+        .settings-float-menu.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .settings-area {
+            position: relative;
+        }
+
+        .settings-title {
+            font-size: 1.75em;
+            margin-bottom: 36px;
+            text-align: center;
+            color: var(--settings-title);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .settings-close {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            width: 38px;
+            height: 38px;
+            border: none;
+            background: var(--settings-bg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            border: 1.5px solid var(--settings-border);
+        }
+
+        .settings-close::before,
+        .settings-close::after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 2px;
+            background: var(--settings-label);
+            border-radius: 1px;
+            transition: all 0.2s ease;
+        }
+
+        .settings-close::before {
+            transform: rotate(45deg);
+        }
+
+        .settings-close::after {
+            transform: rotate(-45deg);
+        }
+
+        .settings-close:hover {
+            transform: scale(1.05);
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        body.dark .settings-close:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .settings-close:hover::before,
+        .settings-close:hover::after {
+            width: 20px;
+        }
+
+        .settings-row {
+            background: rgba(148, 163, 184, 0.05);
+            margin-bottom: 24px;
+            padding: 20px;
+            border-radius: 16px;
+            transition: all 0.2s ease;
+            border: 1.5px solid transparent;
+        }
+
+        .settings-row:hover {
+            background: rgba(148, 163, 184, 0.08);
+            border-color: var(--settings-border);
+            transform: translateY(-2px);
+        }
+
+        .settings-label {
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 1.1em;
+            color: var(--settings-title);
+        }
+
+        .settings-desc {
+            font-size: 0.92em;
+            opacity: 0.75;
+            margin: 8px 0;
+            color: var(--settings-label);
+        }
+
+        .settings-switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+            margin-top: 8px;
+        }
+
+        .settings-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(148, 163, 184, 0.2);
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .switch-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background: var(--settings-bg);
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        input:checked + .switch-slider {
+            background: linear-gradient(135deg, #6366f1, #8B5CF6);
+        }
+
+        input:checked + .switch-slider:before {
+            transform: translateX(24px);
+        }
+
+        .settings-select {
+            width: 100%;
+            margin-top: 8px;
+            height: 40px;
+            padding: 0 16px;
+            background: var(--settings-bg);
+            border: 1.5px solid var(--settings-border);
+            border-radius: 12px;
+            color: var(--settings-label);
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236d28d9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+        }
+
+        .settings-select:hover {
+            border-color: #8B5CF6;
+        }
+
+        .settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 998;
+        }
+
+        .settings-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* New Modern Saved Barcodes Styles */
+        .barcode-quick-add {
+            display: flex;
+            gap: 6px; /* Reduced from 12px */
+            max-width: 600px;
+            width: 90%;
+            margin: 0 auto 32px auto;
+            padding: 0 20px;
+            justify-content: center;
+            align-items: center; /* Add alignment */
+        }
+
+        .barcode-quick-add input {
+            flex: 1;
+            max-width: 500px;
+            height: 48px;
+            padding: 0 20px;
+            border-radius: 12px;
+            border: 2px solid var(--settings-border);
+            background: var(--settings-bg);
+            color: var(--settings-label);
+            font-size: 1.1em;
+            transition: all 0.2s ease;
+        }
+
+        /* Update barcode card styles */
+        .barcode-card {
+            width: 100%;
+            min-width: 320px;
+            max-width: 420px;
+            position: relative;
+            background: var(--settings-bg);
+            border-radius: 24px;
+            border: 1.5px solid var(--settings-border);
+            padding: 32px;
+            margin: 0 auto; /* Center individual cards */
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            cursor: pointer;
+        }
+
+        .barcode-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            border-color: #8B5CF6;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .barcode-preview {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .barcode-value {
+            font-size: 1.2em;
+            color: var(--settings-title);
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .barcode-card svg {
+            padding: 16px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .delete-btn {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .delete-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.25);
+        }
+
+        .delete-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+            padding: 0;
+            background: none;
+            box-shadow: none;
+        }
+
+        /* Preview Modal Styles */
+        .preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgb(0 0 0 / 0%);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .preview-modal.show {
+            opacity: 1;
+            display: flex;
+        }
+
+        .preview-content {
+            background: var(--settings-bg);
+            border-radius: 32px;
+            width: 90%;
+            max-width: 800px;
+            padding: 32px;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .preview-modal.show .preview-content {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            border-radius: 24px 24px 0 0;
+        }
+
+        .preview-header h3 {
+            font-size: 1.5em;
+            color: var(--settings-title);
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .close-preview {
+            background: var(--settings-bg);
+            border: 1.5px solid var(--settings-border);
+            color: var(--settings-label);
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.2s ease;
+        }
+
+        .close-preview:hover {
+            background: var(--settings-border);
+            transform: scale(1.05);
+        }
+
+        .barcode-display {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .preview-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 16px;
+            margin-top: 8px;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #18cfdd, #2164df);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 16px rgba(99,102,241,0.15);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(99,102,241,0.25);
+        }
+
+        .action-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .action-btn.delete {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            box-shadow: 0 8px 16px rgba(239, 68, 68, 0.15);
+        }
+
+        .action-btn.delete:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(239, 68, 68, 0.25);
+        }
+
+        /* Edit button styles */
+        .barcode-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .edit-btn {
+            background: linear-gradient(135deg, #18cfdd, #2164df);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 16px rgba(22, 163, 74, 0.15);
+        }
+
+        .edit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(22, 163, 74, 0.25);
+        }
+
+        .edit-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+            padding: 0;
+            background: none;
+            box-shadow: none;
+        }
+
+        /* Edit Modal Styles */
+        .edit-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgb(0 0 0 / 0%);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .edit-modal.show {
+            opacity: 1;
+            display: flex;
+        }
+
+        .edit-content {
+            background: var(--settings-bg);
+            border-radius: 24px;
+            width: 90%;
+            max-width: 500px;
+            padding: 32px;
+            position: relative;
+            border: 2px solid var(--settings-border);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .edit-modal.show .edit-content {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        .edit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .edit-header h3 {
+            font-size: 1.5em;
+            color: var(--settings-title);
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .close-edit {
+            background: var(--settings-bg);
+            border: 1.5px solid var(--settings-border);
+            color: var(--settings-label);
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.2s ease;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--settings-label);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1.5px solid var(--settings-border);
+            background: var(--settings-bg);
+            color: var(--settings-label);
+            font-size: 1.1em;
+            transition: all 0.2s ease;
+        }
+
+        .form-group input:focus {
+            border-color: #8B5CF6;
+            outline: none;
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, #23efff, #003ca9);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .save-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(22, 163, 74, 0.25);
+        }
+
+        .barcode-preview-text {
+            font-size: 0.85em;
+            color: var(--settings-label);
+            opacity: 0.7;
+            margin: -8px 0 8px 0;
+            text-align: center;
+        }
+
+        /* Add slogan style */
+        .slogan {
+            text-align: center;
+            color: var(--settings-label);
+            opacity: 0.5;
+            font-size: 1.1em;
+            margin: 10px 0 25px 0;  /* Changed from margin-bottom: 20px */
+            font-style: italic;
+            font-weight: 500;
+        }
+
+        /* Delete Confirmation Modal */
+        .delete-confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+            opacity: 0;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .delete-confirm-modal.show {
+            opacity: 1;
+            display: flex;
+        }
+
+        .delete-confirm-content {
+            background: var(--settings-bg);
+            border-radius: 24px;
+            width: 90%;
+            max-width: 400px;
+            padding: 32px;
+            position: relative;
+            border: 2px solid var(--settings-border);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .delete-confirm-modal.show .delete-confirm-content {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        .delete-confirm-title {
+            font-size: 1.5em;
+            color: var(--settings-title);
+            margin: 0 0 16px 0;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .delete-confirm-text {
+            color: var(--settings-label);
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .delete-confirm-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 20px auto;
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.15);
+        }
+
+        body.dark .delete-confirm-icon {
+            background: linear-gradient(135deg, #991b1b, #dc2626);
+        }
+
+        .delete-confirm-icon svg {
+            width: 28px;
+            height: 28px;
+            fill: #dc2626;
+        }
+
+        body.dark .delete-confirm-icon svg {
+            fill: #fecaca;
+        }
+
+        .delete-confirm-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .cancel-delete {
+            padding: 12px 24px;
+            background: var(--settings-bg);
+            border: 1.5px solid var(--settings-border);
+            border-radius: 12px;
+            color: var(--settings-label);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            min-width: 100px;
+        }
+
+        .cancel-delete:hover {
+            background: var(--settings-border);
+            transform: translateY(-2px);
+        }
+
+        .confirm-delete {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            min-width: 100px;
+        }
+
+        .confirm-delete:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.25);
+        }
+
+        /* Add these styles in the <style> section */
+        .barcode-card {
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .barcode-card.dragging {
+            opacity: 0.9;
+            transform: scale(1.02);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            cursor: grabbing;
+            z-index: 1000;
+            position: relative;
+        }
+
+        .barcode-card.drag-over {
+            transform: translateY(15px);
+        }
+
+        /* Updated Modern Drag Handle */
+        .drag-handle {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            width: 24px;
+            height: 24px;
+            display: grid;
+            grid-template-columns: repeat(2, 3px);
+            gap: 4px;
+            justify-content: center;
+            align-content: center;
+            opacity: 0.4;
+            transition: all 0.2s ease;
+            cursor: grab;
+            padding: 4px;
+            border-radius: 6px;
+        }
+
+        .drag-handle span {
+            width: 3px;
+            height: 3px;
+            background-color: var(--settings-label);
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+        }
+
+        .barcode-card:hover .drag-handle {
+            opacity: 0.7;
+            background-color: rgba(139, 92, 246, 0.1);
+        }
+
+        body.dark .barcode-card:hover .drag-handle {
+            background-color: rgba(139, 92, 246, 0.15);
+        }
+
+        .drag-handle:hover {
+            opacity: 1 !important;
+            transform: scale(1.1);
+            background-color: rgba(139, 92, 246, 0.2);
+        }
+
+        .barcode-card.dragging .drag-handle {
+            opacity: 1;
+            background-color: rgba(139, 92, 246, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Add floating button + menu -->
+        <button class="settings-float-btn" id="settingsBtn" title="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2  9.54,2.18  9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+            </svg>
+        </button>
+
+        <div class="settings-overlay" id="settingsOverlay"></div>
+        <div class="settings-float-menu" id="settingsMenu">
+            <div class="settings-area">
+                <h2 class="settings-title">Settings</h2>
+                <button class="settings-close" onclick="toggleSettings()" title="Close Settings">
+                </button>
+                
+                <div class="settings-row">
+                    <div class="settings-label">Dark Mode</div>
+                    <div class="settings-desc">Choose light or dark mode for the interface.</div>
+                    <label class="settings-switch">
+                        <input type="checkbox" id="darkModeSwitch">
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+                
+                <div class="settings-row">
+                    <div class="settings-label">Language</div>
+                    <div class="settings-desc">Select your preferred language.</div>
+                    <select id="languageSelect" class="settings-select">
+                        <option value="en">English</option>
+                        <option value="tr">Türkçe</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add slogan before tab bar -->
+        <div class="slogan">Work hard, have fun, make history</div>
+        
+        <div class="tab-bar" id="tabBar">
+            <button class="tab-btn active" id="tabCustomBtn" onclick="showTab('custom')">Barcode Generator</button>
+            <button class="tab-btn" id="tabWarehouseBtn" onclick="showTab('warehouse')">Buffer Barcodes</button>
+            <button class="tab-btn" id="tabSavedBtn" onclick="showTab('saved')">Registered Barcodes</button>
+        </div>
+        <!-- Barcode Generator Tab -->
+        <div id="tabCustom" class="tab-content active">
+            <h1 class="tab-header barcode-generator">Barcode Generator</h1>
+            <div class="custom-barcode-area">
+                <form id="customBarcodeForm" onsubmit="event.preventDefault(); handleCustomBarcode();">
+                    <input type="text" id="customBarcodeInput" class="custom-barcode-input" maxlength="64" placeholder="Enter the text to convert to barcode..." autocomplete="off" required>
+                    <div style="display:flex;flex-direction:column;align-items:center;">
+                        <button type="submit" class="custom-generate-btn">Generate Barcode</button>
+                        <div class="instant-generate-wrapper">
+                            <label class="instant-switch">
+                                <input type="checkbox" id="instantGenerateSwitch">
+                                <span class="instant-slider"></span>
+                            </label>
+                            <span class="instant-label" id="instantGenerateLabel">Instant Generate</span>
+                        </div>
+                    </div>
+                </form>
+                <div class="barcode-container" id="customBarcodeContainer" style="display: none;">
+                    <div class="barcode-text" id="customBarcodeText"></div>
+                    <div id="barcodeWrapper" style="display:flex;justify-content:center;align-items:center;width:100%;">
+                        <svg id="customBarcode"></svg>
+                    </div>
+                    <button class="clear-btn" onclick="clearCustomBarcode()">Clear Barcode</button>
+                </div>
+            </div>
+        </div>
+        <!-- Buffer Barcodes Tab -->
+        <div id="tabWarehouse" class="tab-content">
+            <h1 class="tab-header buffer-barcodes">Buffer Barcodes</h1>
+            <div class="warehouse-layout">
+                <div class="shelf-row category-c">
+                    <div class="shelf-category" id="categoryC"></div>
+                </div>
+                <div class="shelf-row category-b">
+                    <div class="shelf-category" id="categoryB"></div>
+                </div>
+                <div class="shelf-row category-a">
+                    <div class="shelf-category" id="categoryA"></div>
+                </div>
+            </div>
+            <div class="barcode-container" id="barcodeContainer">
+                <div class="barcode-text" id="barcodeText"></div>
+                <svg id="barcode"></svg>
+                <button class="clear-btn" onclick="clearBarcode()">Clear Barcode</button>
+            </div>
+        </div>
+        <!-- Registered Barcodes Tab -->
+        <div id="tabSaved" class="tab-content">
+            <h1 class="tab-header registered-barcodes">Registered Barcodes</h1>
+            <div class="saved-barcodes-area">
+                <div class="barcode-quick-add">
+                    <input type="text" id="savedBarcodeInput" placeholder="Enter barcode text..." 
+                           onkeypress="if(event.key === 'Enter') { event.preventDefault(); addSavedBarcode(); }">
+                    <button class="custom-generate-btn add-btn" onclick="addSavedBarcode()">+</button>
+                </div>
+                
+                <div class="barcode-grid" id="savedBarcodesGrid">
+                    <!-- Barcodes will be rendered here -->
+                </div            </div>
+
+
+
+            <!-- Preview Modal -->
+            <div class="preview-modal" id="previewModal">
+                <div class="preview-content">
+                    <div class="preview-header">
+                        <h3>Barkod Önizleme</h3>
+                        <button class="close-preview">&times;</button>
+                    </div>
+                    <div class="preview-body">
+                        <div class="barcode-display">
+                            <svg id="previewBarcode"></svg>
+                        </div>
+                        <div class="preview-actions">
+                            <button class="action-btn edit" onclick="editSavedBarcode(currentBarcode)">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                </svg>
+                                <span class="action-text">Edit</span>
+                            </button>
+                            <button class="action-btn delete" onclick="deleteSavedBarcode(currentBarcode)">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                </svg>
+                                <span class="action-text">Delete</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Modal -->
+            <div class="edit-modal" id="editModal">
+                <div class="edit-content">
+                    <div class="edit-header">
+                       
+                        <h3>Barkodu Düzenle</h3>
+                        <button class="close-edit">&times;</button>
+                    </div>
+                    <div class="edit-form">
+                        <div class="form-group">
+                            <label>Başlık</label>
+                            <input type="text" id="editTitle" placeholder="Barkod için başlık girin...">
+                        </div>
+                        <div class="form-group">
+                            <label>Barkod Metni</label>
+                            <input type="text" id="editBarcode" placeholder="Barkod metnini düzenleyin...">
+                        </div>
+                        <div class="edit-actions">
+                            <button class="save-btn" onclick="saveBarcode()">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                </svg>
+                                Kaydet
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="delete-confirm-modal" id="deleteConfirmModal">
+        <div class="delete-confirm-content">
+            <h3 class="delete-confirm-title">Delete Barcode?</h3>
+            <p class="delete-confirm-text">Are you sure you want to delete this barcode? This action cannot be undone.</p>
+            <div class="delete-confirm-actions">
+                <button class="cancel-delete">Cancel</button>
+                <button class="confirm-delete">Delete</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Modern tab indicator
+        function updateTabIndicator() {
+            var activeBtn = document.querySelector('.tab-btn.active');
+            var indicator = document.getElementById('tabIndicator');
+            if (!activeBtn || !indicator) return;
+            indicator.style.left = (activeBtn.offsetLeft) + "px";
+            indicator.style.width = activeBtn.offsetWidth + "px";
+        }
+        function showTab(tab) {
+            ['tabWarehouse','tabCustom','tabSaved'].forEach(x=>document.getElementById(x).classList.remove('active'));
+            ['tabWarehouseBtn','tabCustomBtn','tabSavedBtn'].forEach(x=>document.getElementById(x).classList.remove('active'));
+            
+            if(tab === 'warehouse') {
+                document.getElementById('tabWarehouse').classList.add('active');
+                document.getElementById('tabWarehouseBtn').classList.add('active');
+            } else if(tab === 'saved') {
+                document.getElementById('tabSaved').classList.add('active');
+                document.getElementById('tabSavedBtn').classList.add('active');
+                // Immediately load and render saved barcodes when switching to saved tab
+                loadSavedBarcodes();
+            } else {
+                document.getElementById('tabCustom').classList.add('active');
+                document.getElementById('tabCustomBtn').classList.add('active');
+            }
+            setTimeout(updateTabIndicator, 20);
+        }
+        window.addEventListener('resize', updateTabIndicator);
+
+        // Settings: Dark Mode ve Dil Seçimi
+        document.addEventListener('DOMContentLoaded', function() {
+            createShelfCategories();
+            setTimeout(updateTabIndicator, 10);
+
+            // Force English language
+            localStorage.setItem('langPref', 'en');
+            
+            // Set dark mode to OFF if not set
+            if (!localStorage.getItem('darkMode')) {
+                localStorage.setItem('darkMode', 'false');
+            }
+
+            // Dark Mode
+            const darkSwitch = document.getElementById('darkModeSwitch');
+            const darkPref = localStorage.getItem('darkMode');
+            if (darkPref === "true") {
+                document.body.classList.add('dark');
+                darkSwitch.checked = true;
+            } else {
+                document.body.classList.remove('dark');
+                darkSwitch.checked = false;
+            }
+            darkSwitch.addEventListener('change', function() {
+                if (this.checked) {
+                    document.body.classList.add('dark');
+                    localStorage.setItem('darkMode', 'true');
+                } else {
+                    document.body.classList.remove('dark');
+                    localStorage.setItem('darkMode', 'false');
+                }
+            });
+
+            // Language
+            const langSelect = document.getElementById('languageSelect');
+            const langPref = localStorage.getItem('langPref') || "en";
+            langSelect.value = langPref;
+            setLanguage(langPref);
+
+            langSelect.addEventListener('change', function() {
+                setLanguage(this.value);
+                localStorage.setItem('langPref', this.value);
+            });
+
+            // Registered Barcodes
+            loadSavedBarcodes();
+
+            // Initialize instant generate switch
+            const instantSwitch = document.getElementById('instantGenerateSwitch');
+            const customInput = document.getElementById('customBarcodeInput');
+            const generateBtn = document.querySelector('.custom-generate-btn');
+            
+            instantSwitch.checked = localStorage.getItem('instantGenerate') === 'true';
+            if (instantSwitch.checked) {
+                generateBtn.classList.add('disabled');
+            }
+            
+            instantSwitch.addEventListener('change', function() {
+                localStorage.setItem('instantGenerate', this.checked);
+                if (this.checked) {
+                    generateBtn.classList.add('disabled');
+                    if (customInput.value.trim()) {
+                        handleCustomBarcode();
+                    }
+                } else {
+                    generateBtn.classList.remove('disabled');
+                }
+            });
+            
+            customInput.addEventListener('input', function() {
+                if (instantSwitch.checked && this.value.trim()) {
+                    handleCustomBarcode();
+                }
+            });
+        });
+
+        // Language i18n
+        const translations = {
+            tr: {
+                "Barcode Generator": "Barkod Oluşturucu",
+                "Buffer Barcodes": "Buffer Barkodları",
+                "Registered Barcodes": "Kayıtlı Barkodlar",
+                "Settings": "Ayarlar",
+                "Ayarlar": "Ayarlar",
+                "Koyu Mod": "Koyu Mod",
+                "Arayüz için açık veya koyu modu seçin.": "Arayüz için açık veya koyu mod seçin.",
+                "Dil": "Dil",
+                "Uygulama dilini seçin.": "Tercih ettiğiniz dili seçin.",
+                "Barkoda çevirmek istediğiniz metni yazın...": "Barkoda çevirmek istediğiniz metni yazın...",
+
+                "Barkod Oluştur": "Barkod Oluştur",
+                "Barkodu Temizle": "Barkodu Temizle",
+                "Dark Mode": "Koyu Mod",
+                "Choose light or dark mode for the interface.": "Arayüz için açık veya koyu mod seçin.",
+                "Language": "Dil",
+                "Select your preferred language.": "Tercih ettiğiniz dili seçin.",
+                "Enter the text to convert to barcode...": "Barkoda çevirmek istediğiniz metni yazın...",
+                "Generate Barcode": "Barkod Oluştur",
+                "Clear Barcode": "Barkodu Temizle",
+                "Selected Buffer": "Seçilen Buffer",
+                "Barcode": "Barkod",
+                "Text": "Metin",
+                "Registered Barcodes": "Kayıtlı Barkodlar",
+                "Add": "Ekle",
+                "Delete": "Sil",
+                "Enter barcode text...": "Barkod metni girin...",
+                "Close Settings": "Ayarları Kapat",
+                "tab-header-barcode-generator": "Barkod Oluşturucu",
+                "tab-header-buffer-barcodes": "Buffer Barkodları", 
+                "tab-header-registered-barcodes": "Kayıtlı Barkodlar",
+                "Edit": "Düzenle",
+                "Edit Barcode": "Barkodu Düzenle",
+                "Save": "Kaydet",
+                "Preview": "Önizleme",
+                "Barcode Preview": "Barkod Önizleme",
+                "Title": "Başlık",
+                "Enter title for barcode...": "Barkod için başlık girin...",
+                "Barcode Text": "Barkod Metni",
+                "Edit barcode text...": "Barkod metnini düzenleyin...",
+                "Close": "Kapat",
+                "Instant Generate": "Anında Oluştur",
+                "Delete Barcode?": "Barkodu Sil?",
+                "Are you sure you want to delete this barcode? This action cannot be undone.": "Bu barkodu silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+                "Cancel": "İptal",
+                "Delete": "Sil"
+            },
+            en: {
+                "Barcode Generator": "Barcode Generator", 
+                "Buffer Barcodes": "Buffer Barcodes",
+                "Registered Barcodes": "Registered Barcodes",
+                "Settings": "Settings",
+                "Ayarlar": "Settings",
+                "Koyu Mod": "Dark Mode",
+                "Arayüz için açık veya koyu modu seçin.": "Choose light or dark mode for the interface.",
+                "Dil": "Language",
+                "Select the app language.": "Select the app language.",
+                "Barkoda çevirmek istediğiniz metni yazın...": "Enter the text to convert to barcode...",
+                "Barkod Oluştur": "Generate Barcode",
+                "Barkodu Temizle": "Clear Barcode",
+                "Dark Mode": "Dark Mode",
+                "Choose light or dark mode for the interface.": "Choose light or dark mode for the interface.",
+                "Language": "Language",
+                "Select the app language.": "Select the app language.",
+                "Enter the text to convert to barcode...": "Enter the text to convert to barcode...",
+                "Generate Barcode": "Generate Barcode",
+                "Clear Barcode": "Clear Barcode",
+                "Selected Buffer": "Selected Buffer",
+                "Barcode": "Barcode",
+                "Text": "Text",
+                "Registered Barcodes": "Registered Barcodes",
+                "Add": "Add",
+                "Delete": "Delete",
+                "Enter barcode text...": "Enter barcode text...", 
+                "Close Settings": "Close Settings",
+                "tab-header-barcode-generator": "Barcode Generator",
+                "tab-header-buffer-barcodes": "Buffer Barcodes",
+                "tab-header-registered-barcodes": "Registered Barcodes",
+                "Edit": "Edit",
+                "Edit Barcode": "Edit Barcode",
+                "Save": "Save",
+                "Preview": "Preview",
+                "Barcode Preview": "Barcode Preview", 
+                "Title": "Title",
+                "Enter title for barcode...": "Enter title for barcode...",
+                "Barcode Text": "Barcode Text", 
+                "Edit barcode text...": "Edit barcode text...",
+                "Close": "Close",
+                "Instant Generate": "Instant Generate",
+                "Delete Barcode?": "Delete Barcode?", 
+                "Are you sure you want to delete this barcode? This action cannot be undone.": "Are you sure you want to delete this barcode? This action cannot be undone.",
+                "Cancel": "Cancel",
+                "Delete": "Delete"
+            }
+        };
+        // Update setLanguage function to handle more elements
+        function setLanguage(lang) {
+            // Get all translatable elements
+            document.getElementById('tabCustomBtn').textContent = translations[lang]["Barcode Generator"];
+            document.getElementById('tabWarehouseBtn').textContent = translations[lang]["Buffer Barcodes"];
+            document.getElementById('tabSavedBtn').textContent = translations[lang]["Registered Barcodes"];
+            
+            // Update placeholders
+            document.getElementById('customBarcodeInput').placeholder = translations[lang]["Enter the text to convert to barcode..."];
+            document.getElementById('savedBarcodeInput').placeholder = translations[lang]["Enter barcode text..."];
+            
+            // Update headers
+            document.querySelector('.tab-header.barcode-generator').textContent = translations[lang]["Barcode Generator"];
+            document.querySelector('.tab-header.buffer-barcodes').textContent = translations[lang]["Buffer Barcodes"];
+            document.querySelector('.tab-header.registered-barcodes').textContent = translations[lang]["Registered Barcodes"];
+            
+            // Update buttons
+            document.querySelectorAll('.custom-generate-btn').forEach(btn => {
+                if (!btn.classList.contains('add-btn')) {
+                    btn.textContent = translations[lang]["Generate Barcode"];
+                }
+            });
+            
+            document.querySelectorAll('.clear-btn').forEach(btn => {
+                btn.textContent = translations[lang]["Clear Barcode"];
+            });
+            
+            // Update instant generate label
+            document.getElementById('instantGenerateLabel').textContent = translations[lang]["Instant Generate"];
+            
+            // Update modal texts
+            document.querySelectorAll('.preview-header h3').forEach(h3 => {
+                h3.textContent = translations[lang]["Barcode Preview"];
+            });
+            
+            document.querySelectorAll('.edit-header h3').forEach(h3 => {
+                h3.textContent = translations[lang]["Edit Barcode"];
+            });
+            
+            // Update edit form 
+            const titleLabel = document.querySelector('.form-group:nth-child(1) label');
+            const barcodeLabel = document.querySelector('.form-group:nth-child(2) label');
+            if (titleLabel) titleLabel.textContent = translations[lang]["Title"];
+            if (barcodeLabel) barcodeLabel.textContent = translations[lang]["Barcode Text"];
+            
+            // Update edit form placeholders
+            document.getElementById('editTitle').placeholder = translations[lang]["Enter title for barcode..."];
+            document.getElementById('editBarcode').placeholder = translations[lang]["Edit barcode text..."];
+            
+            // Update save button
+            document.querySelector('.save-btn').textContent = translations[lang]["Save"];
+            
+            // Update settings texts
+            document.querySelector('.settings-title').textContent = translations[lang]["Settings"];
+            document.querySelector('.settings-close').title = translations[lang]["Close Settings"];
+            
+            // Update settings rows
+            const settingsRows = document.querySelectorAll('.settings-row');
+            settingsRows[0].querySelector('.settings-label').textContent = translations[lang]["Dark Mode"];
+            settingsRows[0].querySelector('.settings-desc').textContent = translations[lang]["Choose light or dark mode for the interface."];
+            settingsRows[1].querySelector('.settings-label').textContent = translations[lang]["Language"];
+            settingsRows[1].querySelector('.settings-desc').textContent = translations[lang]["Select your preferred language."];
+            
+            // Update preview modal action buttons
+            document.querySelectorAll('.action-text').forEach(span => {
+                if (span.parentElement.classList.contains('edit')) {
+                    span.textContent = translations[lang]["Edit"];
+                } else if (span.parentElement.classList.contains('delete')) {
+                    span.textContent = translations[lang]["Delete"];
+                }
+            });
+            
+            // Update delete confirmation modal
+            document.querySelector('.delete-confirm-title').textContent = translations[lang]["Delete Barcode?"];
+            document.querySelector('.delete-confirm-text').textContent = translations[lang]["Are you sure you want to delete this barcode? This action cannot be undone."];
+            document.querySelector('.cancel-delete').textContent = translations[lang]["Cancel"];
+            document.querySelector('.confirm-delete').textContent = translations[lang]["Delete"];
+            
+            // Store preference
+            localStorage.setItem('langPref', lang);
+            
+            // Update any dynamic barcode texts
+            updateAllBarcodeTexts(lang);
+        }
+
+        function updateAllBarcodeTexts(lang) {
+            // Custom Barcode
+
+            const val = document.getElementById('customBarcodeInput').value.trim();
+
+            if (val && document.getElementById('customBarcodeContainer').classList.contains('show')) {
+                document.getElementById('customBarcodeText').innerHTML = `<strong>${translations[lang]["Text"]}:</strong> ${val}`;
+            }
+            // Buffer barcode
+            if (window.selectedBuffer) {
+                const bufferId = window.selectedBuffer;
+                const letter = bufferId.charAt(0);
+                const number = bufferId.slice(1).padStart(2, '0');
+                const barcodeValue = `cvBUFFER${letter}${number}`;
+                document.getElementById('barcodeText').innerHTML =
+                    `<strong>${translations[lang]["Selected Buffer"]}:</strong> ${bufferId} → <strong>${translations[lang]["Barcode"]}:</strong> ${barcodeValue}`;
+            }
+            // Saved barcode
+            if(window.savedBarcodeLastText){
+                document.getElementById('savedBarcodeText').innerHTML =
+                    `<strong>${translations[lang]["Text"]}:</strong> ${window.savedBarcodeLastText}`;
+            }
+        }
+
+        // Shelf rendering and barcode selection
+        let selectedBuffer = null;
+        let isFirstBarcode = true;
+        function createShelfCategories() {
+            const categories = [
+                { letter: 'A', container: 'categoryA' },
+                { letter: 'B', container: 'categoryB' },
+                { letter: 'C', container: 'categoryC' }
+            ];
+            categories.forEach(category => {
+                const container = document.getElementById(category.container);
+                for (let i = 1; i <= 25; i++) {
+                    const shelfContainer = document.createElement('div');
+                    shelfContainer.className = 'shelf-container';
+                    const numberLabel = document.createElement('div');
+                    numberLabel.className = 'shelf-number';
+                    numberLabel.textContent = `${category.letter} ${i}`;
+                    const box = document.createElement('div');
+                    const bufferId = `${category.letter}${i}`;
+                    box.className = 'shelf-box';
+                    box.textContent = bufferId;
+                    box.id = `buffer-${bufferId}`;
+                    box.onclick = () => generateBarcode(bufferId);
+                    box.title = `${bufferId} buffer`;
+                    shelfContainer.appendChild(box);
+                    container.appendChild(shelfContainer);
+                }
+            });
+        }
+        function generateBarcode(bufferId) {
+            if (selectedBuffer === bufferId) {
+                clearBarcode();
+                return;
+            }
+            if (selectedBuffer) {
+                const prevBox = document.getElementById(`buffer-${selectedBuffer}`);
+                const prevContainer = prevBox?.parentElement;
+                if (prevBox) prevBox.classList.remove('selected');
+                if (prevContainer) prevContainer.classList.remove('selected');
+            }
+            selectedBuffer = bufferId;
+            window.selectedBuffer = bufferId;
+            const currentBox = document.getElementById(`buffer-${bufferId}`);
+            const currentContainer = currentBox?.parentElement;
+            if (currentBox) currentBox.classList.add('selected');
+            if (currentContainer) currentContainer.classList.add('selected');
+            const category = bufferId.charAt(0).toLowerCase();
+            const letter = bufferId.charAt(0);
+            const number = bufferId.slice(1);
+            const formattedNumber = number.padStart(2, '0');
+            const barcodeValue = `cvBUFFER${letter}${formattedNumber}`;
+            const lang = localStorage.getItem('langPref') || 'en';
+            try {
+                const container = document.getElementById('barcodeContainer');
+                const barcodeElement = document.getElementById('barcode');
+                const textElement = document.getElementById('barcodeText');
+                const isContainerVisible = container.classList.contains('show');
+                if (!isContainerVisible) container.classList.add('show');
+                container.className = 'barcode-container show category-' + category;
+                textElement.className = 'barcode-text category-' + category;
+                barcodeElement.className = 'category-' + category;
+                // --- Koyu modda köşe çizgisi dinamik olarak kategori rengine ayarlanacak ---
+                if (document.body.classList.contains('dark')) {
+                    let borderColor = "#8B5CF6"; // Default A
+                    if (category === "b") borderColor = "#16a34a";
+                    if (category === "c") borderColor = "#F59E0B";
+                    textElement.style.border = `1px solid ${borderColor}`;
+                } else {
+                    textElement.style.border = "";
+                }
+                if (isFirstBarcode) {
+                    JsBarcode("#barcode", barcodeValue, {
+                        format: "CODE128", width: 4.5, height: 180, displayValue: true,
+                        fontSize: 22, textAlign: "center", textPosition: "bottom", textMargin: 15,
+                        fontOptions: "bold", font: "Arial", backgroundColor: "#ffffff",
+                        lineColor: "#000000", margin: 20
+                    });
+                    textElement.innerHTML = `<strong>${translations[lang]["Selected Buffer"]}:</strong> ${bufferId} → <strong>${translations[lang]["Barcode"]}:</strong> ${barcodeValue}`;
+                    isFirstBarcode = false;
+                } else {
+                    barcodeElement.classList.add('barcode-changing');
+                    textElement.style.transform = 'scale(0.95)';
+                    textElement.style.opacity = '0.6';
+                    setTimeout(() => {
+                        JsBarcode("#barcode", barcodeValue, {
+                            format: "CODE128", width: 4.5, height: 180, displayValue: true,
+                            fontSize: 22, textAlign: "center", textPosition: "bottom", textMargin: 15,
+                            fontOptions: "bold", font: "Arial", backgroundColor: "#ffffff",
+                            lineColor: "#000000", margin: 20
+                        });
+                        textElement.innerHTML = `<strong>${translations[lang]["Selected Buffer"]}:</strong> ${bufferId} → <strong>${translations[lang]["Barcode"]}:</strong> ${barcodeValue}`;
+                        barcodeElement.classList.remove('barcode-changing');
+                        barcodeElement.classList.add('barcode-appear');
+                        textElement.style.transform = 'scale(1)';
+                        textElement.style.opacity = '1';
+                        setTimeout(() => { barcodeElement.classList.remove('barcode-appear'); }, 250);
+                    }, 150);
+                }
+                setTimeout(() => {
+                    container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, isFirstBarcode ? 50 : 200);
+            } catch (error) {
+                alert('❌ Error while generating barcode: ' + error.message);
+            }
+        }
+        function clearBarcode() {
+            if (selectedBuffer) {
+                const currentBox = document.getElementById(`buffer-${selectedBuffer}`);
+                const currentContainer = currentBox?.parentElement;
+                if (currentBox) currentBox.classList.remove('selected');
+                if (currentContainer) currentContainer.classList.remove('selected');
+                selectedBuffer = null;
+                window.selectedBuffer = null;
+            }
+            const container = document.getElementById('barcodeContainer');
+            if (container.classList.contains('show')) {
+                container.classList.remove('show');
+                isFirstBarcode = true;
+            }
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' || (e.key === 'Delete' && document.activeElement !== document.getElementById('customBarcodeInput'))) {
+                clearBarcode();
+                clearCustomBarcode();
+                clearSavedBarcode();
+            }
+        });
+
+        // Barcode Generator Logic
+        function handleCustomBarcode() {
+            const lang = localStorage.getItem('langPref') || 'en';
+            const val = document.getElementById('customBarcodeInput').value.trim();
+            if(!val) return hideCustomBarcodeContainer();
+            
+            const container = document.getElementById('customBarcodeContainer');
+            const barcodeEl = document.getElementById('customBarcode');
+            const textEl = document.getElementById('customBarcodeText');
+            
+            // Barkod SVG sıfırlama
+            barcodeEl.innerHTML = '';
+            
+            // Barkod oluştur
+            JsBarcode("#customBarcode", val, {
+                format: "CODE128",
+                width: 4.5,
+                height: 180,
+                displayValue: true,
+                fontSize: 22,
+
+                textAlign: "center",
+                textPosition: "bottom",
+                textMargin: 15,
+                fontOptions: "bold",
+                font: "Arial",
+                backgroundColor: "#fff",
+                lineColor: "#000",
+                margin: 20
+            });
+            
+            // Konteyneri göster, hızlı animasyon ekle
+            container.classList.remove('hidden');
+            container.classList.add('show');
+            container.style.opacity = '0.6';
+            container.style.transform = 'scale(0.92)';
+            setTimeout(() => {
+                container.style.transition = 'opacity 0.14s, transform 0.14s';
+                container.style.opacity = '1';
+                container.style.transform = 'scale(1)';
+            }, 10);
+
+            textEl.innerHTML = `<strong>${translations[lang]["Text"]}:</strong> ${val}`;
+            setTimeout(function() {
+                const svg = barcodeEl;
+                let w = 600, h = 220;
+                if (svg && svg.getBBox) {
+                    const bbox = svg.getBBox();
+                    w = Math.max(360, bbox.width + 120);
+                    h = Math.max(220, bbox.height + 130);
+                }
+                container.style.width = w + "px";
+                container.style.minWidth = "320px";
+                container.style.maxWidth = "98vw";
+                container.style.minHeight = h + "px";
+                container.style.padding = "45px 80px";
+                container.style.display = "flex";
+                container.style.flexDirection = "column";
+                container.style.alignItems = "center";
+                container.style.justifyContent = "center";
+                barcodeEl.style.display = "block";
+                barcodeEl.style.marginLeft = "auto";
+                barcodeEl.style.marginRight = "auto";
+            }, 60);
+            setTimeout(() => {
+                container.scrollIntoView({behavior:'smooth', block:'center'});
+            }, 120);
+        }
+        function hideCustomBarcodeContainer() {
+            const container = document.getElementById('customBarcodeContainer');
+            container.classList.remove('show');
+            container.classList.add('hidden');
+            container.style.opacity = "1";
+            container.style.transform = "scale(1)";
+            document.getElementById('customBarcodeText').innerHTML = '';
+            document.getElementById('customBarcode').innerHTML = '';
+        }
+        function clearCustomBarcode() {
+            const container = document.getElementById('customBarcodeContainer');
+            container.classList.remove('show');
+            container.style.display = 'none'; // Hide container completely
+            document.getElementById('customBarcodeText').innerHTML = '';
+            document.getElementById('customBarcode').innerHTML = '';
+            document.getElementById('customBarcodeInput').value = '';
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key.toLowerCase() === 's' && e.ctrlKey && document.activeElement === document.body) {
+                e.preventDefault();
+            }
+        });
+        document.addEventListener('keyup', function(e) {
+            if (e.target === document.body) return;
+            const input = document.getElementById('customBarcodeInput');
+            if (!input) return;
+            if (input.value.trim().toLowerCase() === "ayda sil") {
+                clearCustomBarcode();
+                input.value = "";
+            }
+        });
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'langPref') {
+                setLanguage(e.newValue);
+            }
+        });
+
+        // -------- Registered Barcodes logic --------
+
+        // Util: get/set barcodes from localStorage
+        function getSavedBarcodes() {
+            let arr;
+            try {
+                arr = JSON.parse(localStorage.getItem('savedBarcodes') || '[]');
+            } catch (e) { arr = []; }
+            if (!Array.isArray(arr)) arr = [];
+            if(arr.length === 0) arr = [{text: 'dz-Hybrid', title: ''}];
+            // Convert any plain string items to objects
+            arr = arr.map(item => typeof item === 'string' ? {text: item, title: ''} : item);
+            return arr;
+        }
+        function setSavedBarcodes(arr) {
+            localStorage.setItem('savedBarcodes', JSON.stringify(arr));
+        }
+
+        function loadSavedBarcodes() {
+            let saved = getSavedBarcodes();
+            setSavedBarcodes(saved);
+            renderSavedBarcodes();
+        }
+        function renderSavedBarcodes() {
+            const lang = localStorage.getItem('langPref') || 'en';
+            const grid = document.getElementById('savedBarcodesGrid');
+            const barcodes = getSavedBarcodes();
+            
+            grid.innerHTML = barcodes.map(barcode => `
+                <div class="barcode-card" 
+                     draggable="true"
+                     data-barcode="${barcode.text}"
+                     onclick="showPreviewModal('${barcode.text}')">
+                    <div class="drag-handle" title="Drag to reorder">
+                        <span></span><span></span><span></span>
+                        <span></span><span></span><span></span>
+                    </div>
+                    <div class="barcode-preview">
+                        <p class="barcode-value">${barcode.title || barcode.text}</p>
+                        <div class="barcode-preview-text">${barcode.text}</div>
+                        <svg id="barcode-${barcode.text.replace(/[^a-zA-Z0-9]/g, '')}"></svg>
+                    </div>
+                    <div class="barcode-actions">
+                        <button class="edit-btn" onclick="event.stopPropagation(); editSavedBarcode('${barcode.text}')" title="Düzenle">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                        </button>
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteSavedBarcode('${barcode.text}')">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Render barcodes and add event listeners
+            barcodes.forEach(barcode => {
+                JsBarcode(`#barcode-${barcode.text.replace(/[^a-zA-Z0-9]/g, '')}`, 'emirdavj', {
+                    format: "CODE128",
+                    width: 1.2,
+                    height: 80,
+                    displayValue: false,
+                    margin: 5
+                });
+            });
+
+            // Add drag and drop event listeners to cards
+            const cards = document.querySelectorAll('.barcode-card');
+            cards.forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('drop', handleDrop);
+                card.addEventListener('dragenter', handleDragEnter);
+                card.addEventListener('dragleave', handleDragLeave);
+            });
+        }
+
+        function addSavedBarcode() {
+            const input = document.getElementById('savedBarcodeInput');
+            const value = input.value.trim();
+            
+            if (!value) return;
+            
+            let barcodes = getSavedBarcodes();
+            if (!barcodes.some(b => b.text === value)) {
+                barcodes.push({text: value, title: ''});
+                setSavedBarcodes(barcodes);
+            }
+            
+            input.value = '';
+            renderSavedBarcodes();
+            
+            // Get current language and update all text
+            const lang = localStorage.getItem('langPref') || 'en';
+            setLanguage(lang);
+        }
+
+        function showPreviewModal(barcode) {
+            const modal = document.getElementById('previewModal');
+            const previewBarcode = document.getElementById('previewBarcode');
+            const previewHeader = modal.querySelector('.preview-header h3');
+            
+            // Store current barcode for delete operation
+            window.currentBarcode = barcode;
+            
+            // Find barcode data to get title
+            const barcodes = getSavedBarcodes();
+            const barcodeData = barcodes.find(b => b.text === barcode);
+            
+            // Update header text based on title availability
+            previewHeader.textContent = barcodeData?.title || 'Barcode Preview';
+            
+            // Clear previous barcode
+            previewBarcode.innerHTML = '';
+            
+            // Generate preview barcode
+            JsBarcode(previewBarcode, barcode, {
+                format: "CODE128",
+                width: 3,
+                height: 150,
+                displayValue: true,
+                fontSize: 20,
+                margin: 10,
+                background: "#ffffff",
+                lineColor: "#000000",
+                font: "Inter"
+            });
+            
+            // Show modal with animation
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+            });
+            
+            // Event listeners
+            const closeModal = () => {
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                }, 300);
+                document.removeEventListener('keydown', handleEscape);
+            };
+            
+            const handleEscape = (e) => {
+                if (e.key === 'Escape') closeModal();
+            };
+            
+            modal.onclick = (e) => {
+                if (e.target === modal) closeModal();
+            };
+            
+            document.querySelector('.close-preview').onclick = closeModal;
+            document.addEventListener('keydown', handleEscape);
+        }
+
+        function deleteSavedBarcode(barcode) {
+            const modal = document.getElementById('deleteConfirmModal');
+            const confirmBtn = modal.querySelector('.confirm-delete');
+            const cancelBtn = modal.querySelector('.cancel-delete');
+            const title = modal.querySelector('.delete-confirm-title');
+            const text = modal.querySelector('.delete-confirm-text');
+            
+            const lang = localStorage.getItem('langPref') || 'en';
+            title.textContent = translations[lang]["Delete Barcode?"];
+            text.textContent = translations[lang]["Are you sure you want to delete this barcode? This action cannot be undone."];
+            cancelBtn.textContent = translations[lang]["Cancel"];  
+            confirmBtn.textContent = translations[lang]["Delete"];
+
+            // Store barcode to delete
+            window.barcodeToDelete = barcode;
+            
+            // Show confirmation modal
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+            });
+
+            const closeModal = () => {
+                modal.classList.remove('show');
+                setTimeout(() => modal.style.display = 'none', 300);
+                
+                // Remove event listeners
+                confirmBtn.removeEventListener('click', handleConfirm);
+                cancelBtn.removeEventListener('click', handleCancel);
+                document.removeEventListener('keydown', handleEscape);
+            };
+
+            const handleConfirm = () => {
+                let barcodes = getSavedBarcodes();
+                barcodes = barcodes.filter(b => b.text !== window.barcodeToDelete);
+                setSavedBarcodes(barcodes);
+                renderSavedBarcodes();
+                
+                // Close both modals
+                closeModal();
+                const previewModal = document.getElementById('previewModal');
+                if (previewModal.classList.contains('show')) {
+                    previewModal.classList.remove('show');
+                    setTimeout(() => previewModal.style.display = 'none', 300);
+                }
+            };
+
+            const handleCancel = closeModal;
+            const handleEscape = (e) => {
+                if (e.key === 'Escape') closeModal();
+            };
+
+            // Add event listeners
+            confirmBtn.addEventListener('click', handleConfirm);
+            cancelBtn.addEventListener('click', handleCancel);
+            document.addEventListener('keydown', handleEscape);
+        }
+
+        function editSavedBarcode(barcode) {
+            const modal = document.getElementById('editModal');
+            const titleInput = document.getElementById('editTitle');
+            const barcodeInput = document.getElementById('editBarcode');
+            
+            // Find existing barcode data
+            const barcodes = getSavedBarcodes();
+            const barcodeData = barcodes.find(b => b.text === barcode) || {text: barcode, title: ''};
+            
+            window.currentBarcode = barcode;
+            
+            titleInput.value = barcodeData.title;
+            barcodeInput.value = barcodeData.text;
+            
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+            });
+            
+            const closeModal = () => {
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                }, 300);
+            };
+            
+            // Add Enter key support
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    saveBarcode();
+                }
+                if (e.key === 'Escape') closeModal();
+            };
+            
+            titleInput.addEventListener('keydown', handleKeyDown);
+            barcodeInput.addEventListener('keydown', handleKeyDown);
+            
+            modal.querySelector('.close-edit').onclick = closeModal;
+            modal.onclick = (e) => {
+                if (e.target === modal) closeModal();
+            };
+            
+            // Remove event listeners when modal closes
+            const cleanup = () => {
+                titleInput.removeEventListener('keydown', handleKeyDown);
+                barcodeInput.removeEventListener('keydown', handleKeyDown);
+            };
+            
+            modal.addEventListener('hide', cleanup, {once: true});
+        }
+
+        function saveBarcode() {
+            const title = document.getElementById('editTitle').value.trim();
+            const newBarcodeText = document.getElementById('editBarcode').value.trim();
+            const oldBarcodeText = window.currentBarcode;
+            
+            if (!newBarcodeText) return;
+            
+            let barcodes = getSavedBarcodes();
+            const index = barcodes.findIndex(b => b.text === oldBarcodeText);
+            
+            if (index !== -1) {
+                barcodes[index] = {text: newBarcodeText, title: title};
+                setSavedBarcodes(barcodes);
+            }
+            
+            document.getElementById('editModal').classList.remove('show');
+            setTimeout(() => {
+                document.getElementById('editModal').style.display = 'none';
+                renderSavedBarcodes();
+            }, 300);
+        }
+
+        // Add settings toggle functions
+        function toggleSettings() {
+            const menu = document.getElementById('settingsMenu');
+            const overlay = document.getElementById('settingsOverlay');
+            const btn = document.getElementById('settingsBtn');
+            const isOpen = menu.classList.contains('show');
+            
+            menu.classList.toggle('show');
+            overlay.classList.toggle('show');
+            btn.classList.toggle('active');
+            
+            // Update menu text based on language
+            if (!isOpen) {
+                const lang = localStorage.getItem('langPref') || 'en';
+                // Update menu title and close button
+                document.querySelector('.settings-title').textContent = translations[lang]["Settings"];
+                document.querySelector('.settings-close').title = translations[lang]["Close"];
+                
+                // Update settings rows
+                document.querySelector('.settings-row:nth-child(1) .settings-label').textContent = translations[lang]["Dark Mode"];
+                document.querySelector('.settings-row:nth-child(1) .settings-desc').textContent = translations[lang]["Choose light or dark mode for the interface."];
+                document.querySelector('.settings-row:nth-child(2) .settings-label').textContent = translations[lang]["Language"];
+                document.querySelector('.settings-row:nth-child(2) .settings-desc').textContent = translations[lang]["Select your preferred language."];
+                
+                document.addEventListener('mousedown', closeSettingsOnClickOutside);
+                document.addEventListener('keydown', closeSettingsOnEscape);
+            } else {
+                document.removeEventListener('mousedown', closeSettingsOnClickOutside);
+                document.removeEventListener('keydown', closeSettingsOnEscape);
+            }
+        }
+
+        function closeSettingsOnClickOutside(e) {
+            const menu = document.getElementById('settingsMenu');
+            const button = document.getElementById('settingsBtn');
+            
+            if (!menu.contains(e.target) && !button.contains(e.target)) {
+                toggleSettings();
+            }
+        }
+
+        function closeSettingsOnEscape(e) {
+            if (e.key === 'Escape') {
+                toggleSettings();
+            }
+        }
+
+        document.getElementById('settingsBtn').addEventListener('click', toggleSettings);
+        document.getElementById('settingsOverlay').addEventListener('click', toggleSettings);
+
+        function handleDragStart(e) {
+            this.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', this.dataset.barcode);
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.barcode-card').forEach(card => {
+                card.classList.remove('drag-over');
+            });
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+            if (!this.classList.contains('dragging')) {
+                this.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const draggedBarcode = e.dataTransfer.getData('text/plain');
+            const dropTarget = this.dataset.barcode;
+            
+            if (draggedBarcode === dropTarget) return;
+            
+            let barcodes = getSavedBarcodes();
+            const draggedIdx = barcodes.findIndex(b => b.text === draggedBarcode);
+            const dropIdx = barcodes.findIndex(b => b.text === dropTarget);
+            
+            if (draggedIdx !== -1 && dropIdx !== -1) {
+                const [removed] = barcodes.splice(draggedIdx, 1);
+                barcodes.splice(dropIdx, 0, removed);
+                setSavedBarcodes(barcodes);
+                renderSavedBarcodes();
+            }
+            
+            this.classList.remove('drag-over');
+        }
+    </script>
+    <div class="imza">emirdavj</div>
+</body>
+</html>
